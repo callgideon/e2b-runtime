@@ -230,6 +230,35 @@ func TestNewServiceDiscovery_AnUnsetProviderResolvesBothPlanesLocally(t *testing
 	}
 }
 
+func TestNewServiceDiscovery_DNSBuildsBothPlanesFromNames(t *testing.T) {
+	t.Parallel()
+
+	shared, err := newServiceDiscovery(t.Context(), cfg.Config{
+		ServiceDiscoveryProvider: cfg.ServiceDiscoveryProviderDNS,
+		OrchestratorDNSName:      "localhost",
+		OrchestratorDNSPort:      5008,
+	}, nil, cfg.ServiceDiscoveryProviderDNS)
+	require.NoError(t, err)
+	assert.Same(t, shared.nodes, shared.templateBuilders, "without a builder name the orchestrators build templates")
+
+	nodes, err := shared.nodes.ListInstances(t.Context())
+	require.NoError(t, err)
+	require.NotEmpty(t, nodes)
+	assert.Equal(t, uint16(5008), nodes[0].Port)
+	assert.Equal(t, servicediscovery.BackendDNS, nodes[0].Backend)
+
+	split, err := newServiceDiscovery(t.Context(), cfg.Config{
+		OrchestratorDNSName:    "localhost",
+		TemplateBuilderDNSName: "localhost",
+		OrchestratorDNSPort:    5008,
+	}, nil, cfg.ServiceDiscoveryProviderDNS)
+	require.NoError(t, err)
+	assert.NotSame(t, split.nodes, split.templateBuilders)
+
+	_, err = newServiceDiscovery(t.Context(), cfg.Config{OrchestratorDNSPort: 5008}, nil, cfg.ServiceDiscoveryProviderDNS)
+	require.Error(t, err, "a dns provider without a name must fail at startup")
+}
+
 func TestNewServiceDiscovery_ExplicitProviderSurvivesALocalEnvironment(t *testing.T) {
 	t.Parallel()
 
@@ -272,6 +301,9 @@ func TestLocalRegistryOwnsOrchestrators_FollowsTheProviderNotTheEnvironment(t *t
 		},
 		"nomad anywhere else keeps its node plane": {
 			configured: "", localEnv: false, wantOwns: false,
+		},
+		"dns keeps its node plane": {
+			configured: cfg.ServiceDiscoveryProviderDNS, localEnv: false, wantOwns: false,
 		},
 	}
 

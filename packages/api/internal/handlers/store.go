@@ -79,6 +79,7 @@ type serviceDiscovery struct {
 //	kubernetes       - both list pods via the K8s API
 //	nomad+kubernetes - both are the deduplicated union of the two above
 //	local            - both point at one statically configured address
+//	dns              - both resolve DNS names (ORCHESTRATOR_DNS_NAME, TEMPLATE_BUILDER_DNS_NAME)
 func newServiceDiscovery(ctx context.Context, config cfg.Config, newKube kubeClientFactory, provider string) (serviceDiscovery, error) {
 	switch provider {
 	case cfg.ServiceDiscoveryProviderKubernetes:
@@ -87,6 +88,8 @@ func newServiceDiscovery(ctx context.Context, config cfg.Config, newKube kubeCli
 		return newComposedServiceDiscovery(ctx, config, newKube)
 	case cfg.ServiceDiscoveryProviderLocal:
 		return newLocalServiceDiscovery(config)
+	case cfg.ServiceDiscoveryProviderDNS:
+		return newDNSServiceDiscovery(config)
 	default: // ServiceDiscoveryProviderNomad
 		return newNomadServiceDiscovery(config)
 	}
@@ -161,6 +164,28 @@ func newLocalServiceDiscovery(config cfg.Config) (serviceDiscovery, error) {
 	// An instance that does not report the TemplateBuilder role (the darwin
 	// dummy) registers with IsBuilder=false and is never selected for builds.
 	return serviceDiscovery{nodes: nodes, templateBuilders: nodes}, nil
+}
+
+// newDNSServiceDiscovery resolves the orchestrator name on every refresh. The
+// template builders resolve their own name when one is set; otherwise the
+// orchestrators double as builders (ORCHESTRATOR_SERVICES includes
+// template-manager), as with the local provider.
+func newDNSServiceDiscovery(config cfg.Config) (serviceDiscovery, error) {
+	nodes, err := servicediscovery.NewDNS(config.OrchestratorDNSName, config.OrchestratorDNSPort, nil)
+	if err != nil {
+		return serviceDiscovery{}, fmt.Errorf("orchestrator dns discovery: %w", err)
+	}
+
+	if config.TemplateBuilderDNSName == "" {
+		return serviceDiscovery{nodes: nodes, templateBuilders: nodes}, nil
+	}
+
+	builders, err := servicediscovery.NewDNS(config.TemplateBuilderDNSName, config.OrchestratorDNSPort, nil)
+	if err != nil {
+		return serviceDiscovery{}, fmt.Errorf("template builder dns discovery: %w", err)
+	}
+
+	return serviceDiscovery{nodes: nodes, templateBuilders: builders}, nil
 }
 
 func newNomadServiceDiscovery(config cfg.Config) (serviceDiscovery, error) {

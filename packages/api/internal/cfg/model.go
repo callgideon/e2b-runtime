@@ -38,6 +38,10 @@ const (
 	// orchestrator address. Used to develop the API against the darwin dummy
 	// orchestrator on macOS, where neither Nomad nor Kubernetes is available.
 	ServiceDiscoveryProviderLocal = "local"
+	// ServiceDiscoveryProviderDNS resolves DNS names to orchestrator and template
+	// builder addresses. Used for plain hosts that register under one name each
+	// (for example a Route53 private multivalue record), without Nomad or Kubernetes.
+	ServiceDiscoveryProviderDNS = "dns"
 )
 
 type Config struct {
@@ -103,6 +107,15 @@ type Config struct {
 	// ServiceDiscoveryProvider=local. Used for local dev against the darwin
 	// dummy orchestrator.
 	LocalOrchestratorAddress string `env:"LOCAL_ORCHESTRATOR_ADDRESS" envDefault:"127.0.0.1:5008"`
+
+	// OrchestratorDNSName is the name the dns provider resolves to orchestrator
+	// addresses; each resolved address is dialed on OrchestratorDNSPort.
+	OrchestratorDNSName string `env:"ORCHESTRATOR_DNS_NAME"`
+	// TemplateBuilderDNSName is the name the dns provider resolves to template
+	// builder addresses. Empty means the orchestrators also build templates.
+	TemplateBuilderDNSName string `env:"TEMPLATE_BUILDER_DNS_NAME"`
+	// OrchestratorDNSPort is the orchestrator gRPC port for the dns provider.
+	OrchestratorDNSPort uint16 `env:"ORCHESTRATOR_DNS_PORT" envDefault:"5008"`
 
 	// Used when ServiceDiscoveryProvider is kubernetes or nomad+kubernetes.
 	// Empty K8sAPIEndpoint uses the pod's own ServiceAccount and only works
@@ -328,7 +341,7 @@ func Parse() (Config, error) {
 		config.AuthDBConnectionString = config.PostgresConnectionString
 	}
 
-	if !slices.Contains([]string{"", ServiceDiscoveryProviderNomad, ServiceDiscoveryProviderKubernetes, ServiceDiscoveryProviderNomadKubernetes, ServiceDiscoveryProviderLocal}, config.ServiceDiscoveryProvider) {
+	if !slices.Contains([]string{"", ServiceDiscoveryProviderNomad, ServiceDiscoveryProviderKubernetes, ServiceDiscoveryProviderNomadKubernetes, ServiceDiscoveryProviderLocal, ServiceDiscoveryProviderDNS}, config.ServiceDiscoveryProvider) {
 		return config, newFailureError(
 			FailureConditionInvalidServiceDiscoveryProvider,
 			fmt.Sprintf("invalid service discovery provider: %s", config.ServiceDiscoveryProvider),
