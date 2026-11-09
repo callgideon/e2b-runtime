@@ -67,9 +67,12 @@ func (d *dnsDiscovery) ListInstances(ctx context.Context) ([]Instance, error) {
 	for _, addr := range addrs {
 		instances = append(instances, Instance{
 			WorkloadID: net.JoinHostPort(addr, strconv.Itoa(int(d.port))),
-			IPAddress:  addr,
-			Port:       d.port,
-			Backend:    BackendDNS,
+			// The address is the machine: a build records the NodeID it was placed
+			// on and finds that machine again by it.
+			NodeID:    addr,
+			IPAddress: addr,
+			Port:      d.port,
+			Backend:   BackendDNS,
 		})
 	}
 

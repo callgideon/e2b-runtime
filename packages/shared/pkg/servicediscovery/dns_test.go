@@ -25,8 +25,8 @@ func TestDNSListsOneInstancePerAddress(t *testing.T) {
 	got, err := d.ListInstances(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, []Instance{
-		{WorkloadID: "10.20.1.5:5008", IPAddress: "10.20.1.5", Port: 5008, Backend: BackendDNS},
-		{WorkloadID: "10.20.2.7:5008", IPAddress: "10.20.2.7", Port: 5008, Backend: BackendDNS},
+		{WorkloadID: "10.20.1.5:5008", NodeID: "10.20.1.5", IPAddress: "10.20.1.5", Port: 5008, Backend: BackendDNS},
+		{WorkloadID: "10.20.2.7:5008", NodeID: "10.20.2.7", IPAddress: "10.20.2.7", Port: 5008, Backend: BackendDNS},
 	}, got)
 }
 
