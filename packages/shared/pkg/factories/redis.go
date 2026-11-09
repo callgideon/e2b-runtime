@@ -222,9 +222,24 @@ func NewRedisClient(ctx context.Context, config RedisConfig) (redis.UniversalCli
 		// https://cloud.google.com/memorystore/docs/cluster/cluster-node-specification#cluster_endpoints
 		// https://cloud.google.com/memorystore/docs/cluster/client-library-code-samples#go-redis
 
+		// A redis:// or rediss:// URL may carry an ACL username and password,
+		// as MemoryDB requires; a bare host:port is used as it is.
+		urlOpts, err := parseRedisURL(config.RedisClusterURL)
+		if err != nil {
+			return nil, err
+		}
+		password := config.RedisPassword
+		if urlOpts.Password != "" {
+			if password != "" && password != urlOpts.Password {
+				return nil, errors.New("REDIS_PASSWORD and the password in REDIS_CLUSTER_URL differ: set the password in one place")
+			}
+			password = urlOpts.Password
+		}
+
 		clusterOpts := &redis.ClusterOptions{
-			Addrs:        []string{config.RedisClusterURL},
-			Password:     config.RedisPassword,
+			Addrs:        []string{urlOpts.Addr},
+			Username:     urlOpts.Username,
+			Password:     password,
 			PoolSize:     poolSize,
 			MinIdleConns: minIdleConns,
 			// Disable idle-time eviction; use lifetime-based recycling with jitter instead.
@@ -236,11 +251,13 @@ func NewRedisClient(ctx context.Context, config RedisConfig) (redis.UniversalCli
 			ContextTimeoutEnabled: config.ContextTimeoutEnabled,
 		}
 
-		tlsConfig, err := resolveTLSConfig(ctx, config, config.RedisClusterURL)
+		tlsRequest := config
+		tlsRequest.RedisTLSEnabled = config.RedisTLSEnabled || urlOpts.TLSConfig != nil
+		tlsConfig, err := resolveTLSConfig(ctx, tlsRequest, urlOpts.Addr)
 		if err != nil {
 			return nil, err
 		}
-		if err := refusePlaintextPassword(config.RedisPassword, tlsConfig); err != nil {
+		if err := refusePlaintextPassword(password, tlsConfig); err != nil {
 			return nil, err
 		}
 		clusterOpts.TLSConfig = tlsConfig

@@ -161,6 +161,20 @@ func TestNewRedisClientRefusesPlaintextPassword(t *testing.T) {
 		require.ErrorContains(t, err, "plaintext")
 	})
 
+	t.Run("a password in the cluster URL meets the same rule", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewRedisClient(t.Context(), RedisConfig{RedisClusterURL: "redis://user:secret@redis.example:6379"})
+		require.ErrorContains(t, err, "plaintext")
+	})
+
+	t.Run("cluster URL and REDIS_PASSWORD must agree", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewRedisClient(t.Context(), RedisConfig{RedisClusterURL: "rediss://user:one@redis.example:6379", RedisPassword: "two"})
+		require.ErrorContains(t, err, "differ")
+	})
+
 	t.Run("a password with TLS is allowed", func(t *testing.T) {
 		t.Parallel()
 
