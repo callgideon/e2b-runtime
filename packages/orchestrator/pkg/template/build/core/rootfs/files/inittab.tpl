@@ -1,5 +1,5 @@
 {{- /*gotype:github.com/e2b-dev/infra/packages/orchestrator/pkg/template/build/core/rootfs.templateModel*/ -}}
-{{ .WriteFile "/etc/inittab" 0o777 }}
+{{ .WriteFile "/etc/inittab" 0o644 }}
 
 # Provisioning-boot inittab (busybox init). Every entry is a plain exec with
 # NO shell metacharacters: busybox init hands metachar lines to /bin/sh, and

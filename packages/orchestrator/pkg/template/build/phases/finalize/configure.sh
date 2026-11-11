@@ -91,12 +91,11 @@ echo "Give 'user' ownership to /home/user"
 mkdir -p /home/user
 chown -R user:user /home/user
 
-echo "Give 777 permission to /usr/local"
-chmod -R 777 /usr/local
-
-echo "Create /code directory"
+# mumbo: no world-writable /usr/local or /code. A recursive chmod 777 made every binary there (node, envd's
+# openrc script) writable by any user in the box, which defeats running the agent as an unprivileged user.
+echo "Create /code directory, owned by user"
 mkdir -p /code
-echo "Give 777 permission to /code"
-chmod -R 777 /code
+chown user:user /code
+chmod 0755 /code
 
 echo "Finished configuration script"

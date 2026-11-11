@@ -233,7 +233,7 @@ func additionalOCILayers(
 	}
 
 	filesMap := map[string]oci.File{
-		storage.GuestEnvdPath: {Bytes: envdFileData, Mode: 0o777},
+		storage.GuestEnvdPath: {Bytes: envdFileData, Mode: 0o755},
 
 		// Systemd preset policy for envd. provision.sh removes /etc/machine-id,
 		// so the template's next boot is a systemd FIRST boot — and on first
@@ -245,7 +245,7 @@ func additionalOCILayers(
 		"etc/systemd/system-preset/00-e2b.preset": {Bytes: []byte("enable envd.service\n"), Mode: 0o644},
 
 		// Provision script
-		"usr/local/bin/provision.sh": {Bytes: []byte(provisionScript), Mode: 0o777},
+		"usr/local/bin/provision.sh": {Bytes: []byte(provisionScript), Mode: 0o755},
 		// Setup init system
 		BusyBoxPath: {Bytes: busyboxData, Mode: 0o755},
 		// Set to bin/init so it's not in conflict with systemd

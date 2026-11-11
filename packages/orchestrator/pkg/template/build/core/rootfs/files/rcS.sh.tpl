@@ -1,5 +1,5 @@
 {{- /*gotype:github.com/e2b-dev/infra/packages/orchestrator/pkg/template/build/core/rootfs.templateModel*/ -}}
-{{ .WriteFile "etc/init.d/rcS" 0o777 }}
+{{ .WriteFile "etc/init.d/rcS" 0o755 }}
 
 #!/usr/bin/busybox ash
 # Every command goes through the baked busybox: this runs before provisioning
